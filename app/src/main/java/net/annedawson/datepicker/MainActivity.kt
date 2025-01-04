@@ -70,10 +70,8 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
                 onDismissRequest = { dateDialogController = false },
                 confirmButton = {
                     TextButton(onClick = {
-                        if(dateState.selectedDateMillis != null){
-                            selectedDate = dateState.selectedDateMillis?.plus(86400000)!!
-                            // add the number of milliseconds in a day to the selected date
-                            // to correct the date being one day off
+                        if (dateState.selectedDateMillis != null) {
+                            selectedDate = dateState.selectedDateMillis!!
                         }
                         dateDialogController = false
                     }) {
