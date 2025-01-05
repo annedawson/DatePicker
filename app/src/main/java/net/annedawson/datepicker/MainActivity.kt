@@ -30,6 +30,9 @@ import androidx.compose.ui.unit.sp
 import net.annedawson.datepicker.ui.theme.DatePickerTheme
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
+import java.util.Calendar
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -71,7 +74,9 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
                 confirmButton = {
                     TextButton(onClick = {
                         if (dateState.selectedDateMillis != null) {
-                            selectedDate = dateState.selectedDateMillis!!
+                            // fix the offset issue (one day off correct date)
+                            selectedDate =
+                                epochToLocalTimeZoneConvertor(dateState.selectedDateMillis!!)
                         }
                         dateDialogController = false
                     }) {
@@ -91,8 +96,14 @@ fun Greeting(name: String, modifier: Modifier = Modifier) {
         }
 
 
+
+
         Text(
-            text = "Selected Date: ${convertLongToDate(selectedDate)}",
+            //text = "Selected Date: ${convertLongToDate(selectedDate)}",
+            // NOTE - none of these convert functions worked correctly -
+            // I always got the day before the date I selected - UNTIL...
+            // UNTIL I used epochToLocalTimeZoneConvertor - SEE ABOVE
+            text = "Selected Date: ${convertMillisToDateVersion3(selectedDate)}",
             modifier = Modifier.padding(top = 16.dp),
             fontSize = 24.sp
         )
@@ -106,6 +117,73 @@ fun convertLongToDate(time: Long): String {
     val date = Date(time)
     val format = SimpleDateFormat.getDateInstance()
     return format.format(date)
+}
+
+
+fun convertMillisToDate(millis: Long): String {
+    val formatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault()).apply {
+        timeZone = TimeZone.getDefault() // Set to local time zone
+    }
+    return formatter.format(Date(millis))
+}
+
+/*fun convertMillisToDate(millis: Long): String {
+    val formatter = SimpleDateFormat("MM/dd/yyyy", Locale.getDefault())
+    return formatter.format(Date(millis))
+}*/
+
+fun convertMillisToDateVersion2(millis: Long): String {
+    val calendar = Calendar.getInstance().apply {
+        timeInMillis = millis
+        timeZone = TimeZone.getDefault() // Set to local time zone
+    }
+    val month = calendar.get(Calendar.MONTH) + 1 // Month is 0-indexed
+    val day = calendar.get(Calendar.DAY_OF_MONTH)
+    val year = calendar.get(Calendar.YEAR)
+    return "$month/$day/$year"
+}
+
+fun convertMillisToDateVersion3(millis: Long): String {
+    if (millis == 0L) return "Not selected"
+    val calendar = Calendar.getInstance().apply {
+        timeInMillis = millis
+        timeZone = TimeZone.getTimeZone("UTC") // Set to UTC
+        add(
+            Calendar.MILLISECOND,
+            TimeZone.getDefault().getOffset(millis)
+        ) // Adjust for local time zone
+    }
+    val month = calendar.get(Calendar.MONTH) + 1 // Month is 0-indexed
+    val day = calendar.get(Calendar.DAY_OF_MONTH)
+    val year = calendar.get(Calendar.YEAR)
+    return "$month/$day/$year"
+}
+
+fun convertMillisToDateVersion4(millis: Long): String {
+    val calendar =
+        Calendar.getInstance(TimeZone.getDefault()).apply { // Use default time zone directly
+            timeInMillis = millis
+        }
+    val month = calendar.get(Calendar.MONTH) + 1 // Month is 0-indexed
+    val day = calendar.get(Calendar.DAY_OF_MONTH)
+    val year = calendar.get(Calendar.YEAR)
+    return "$month/$day/$year"
+}
+
+fun epochToLocalTimeZoneConvertor(epoch: Long): Long {
+    val epochCalendar = Calendar.getInstance()
+    epochCalendar.timeZone = TimeZone.getTimeZone("UTC")
+    epochCalendar.timeInMillis = epoch
+    val converterCalendar = Calendar.getInstance()
+    converterCalendar.set(
+        epochCalendar.get(Calendar.YEAR),
+        epochCalendar.get(Calendar.MONTH),
+        epochCalendar.get(Calendar.DATE),
+        epochCalendar.get(Calendar.HOUR_OF_DAY),
+        epochCalendar.get(Calendar.MINUTE),
+    )
+    converterCalendar.timeZone = TimeZone.getDefault()
+    return converterCalendar.timeInMillis
 }
 
 @Preview(showBackground = true)
